@@ -1,0 +1,25 @@
+@model List<Role>
+@{
+    ViewData["Title"] = "Roles";
+}
+
+<div>
+    <h1>Roles</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nom</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (Role role in @Model!)
+            {
+                <tr>
+                    <td>@(role.id)</td>
+                    <td>@(role.nom)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div> 

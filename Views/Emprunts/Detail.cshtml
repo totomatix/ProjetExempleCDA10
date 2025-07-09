@@ -1,0 +1,15 @@
+
+@model Emprunt
+
+@{
+ <div>
+  <h1> Détail de l'emprunt n° @Model.id</h1>
+
+  <p>Livre : @Model.livre?.titre</p>
+  <p>ISBN : @Model.livre?.isbn</p>
+  <p>Emprunteur : @Model.utilisateur?.nom @Model.utilisateur?.prenom</p>
+  <p>Date d'emprunt : @Model.date_emprunt</p>
+  <p>Date de retour : @Model.date_retour</p>
+
+ </div>
+}

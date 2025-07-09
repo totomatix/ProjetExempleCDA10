@@ -1,0 +1,35 @@
+@model List<Utilisateur>
+@{
+    ViewData["Title"] = "Utilisateurs";
+}
+
+<div>
+    <h1>Utilisateurs</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nom</th>
+                <th>Prénom</th>
+                <th>Email</th>
+                <th>Date d'inscription</th>
+                <th>Rôle</th>
+                <th>Détail utilisateur</th> 
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (Utilisateur user in @Model!)
+            {
+                <tr>
+                    <td>@(user.id)</td>
+                    <td>@(user.nom)</td>
+                    <td>@(user.prenom)</td>
+                    <td>@(user.email)</td>
+                    <td>@(user.date_inscription)</td>
+                    <td>@(user.role.nom)</td>
+                    <td><a asp-controller="Utilisateurs" asp-action="Detail" asp-route-id="@(user.id)">Détail</a></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

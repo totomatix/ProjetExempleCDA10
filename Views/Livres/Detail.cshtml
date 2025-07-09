@@ -1,0 +1,10 @@
+@model Livre
+@{
+    ViewData["Title"] = @Model.titre;
+}
+
+<h1>@Model.titre</h1>
+<p>Auteur : @Model.auteur</p>
+<p>ISBN : @Model.isbn</p>
+
+<p>Demande effectuée le @ViewBag.DateDemand par @ViewData["NomUtilisateur"]</p>

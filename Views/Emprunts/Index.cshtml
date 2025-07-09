@@ -1,0 +1,35 @@
+@model List<Emprunt>
+@{
+    ViewData["Title"] = "Emprunts";
+}
+
+<div>
+    <h1>Emprunts</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Date d'emprunt</th>
+                <th>Date de retour</th>
+                <th>Titre du livre</th>
+                <th>ISBN</th>
+                <th>Nom</th>
+                <th>Prenom</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var emprunt in @Model!)
+            {
+                <tr>
+                    <td>@(emprunt.id)</td>
+                    <td>@(emprunt.date_emprunt)</td>
+                    <td>@(emprunt.date_retour)</td>
+                    <td>@(emprunt.livre?.titre)</td>
+                    <td>@(emprunt.livre?.isbn)</td>
+                    <td>@(emprunt.utilisateur?.nom)</td>
+                    <td>@(emprunt.utilisateur?.prenom)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div> 

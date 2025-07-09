@@ -1,0 +1,35 @@
+@model List<Livre>
+@{
+    ViewData["Title"] = "Livres";
+}
+
+<div>
+    <h1>Livres</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Titre</th>
+                <th>Auteur</th>
+                <th>ISBN</th>
+                <th>Date de publication</th>
+                <th>Disponible</th>
+                <th>Lien vers le détail</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (Livre livre in @Model!)
+            {
+                <tr>
+                    <td>@(livre.id)</td>
+                    <td>@(livre.titre)</td>
+                    <td>@(livre.auteur)</td>
+                    <td>@(livre.isbn)</td>
+                    <td>@(livre.date_publication)</td>
+                    <td>@(livre.disponible)</td>
+                    <td><a asp-controller="Livres" asp-action="Detail" asp-route-id="@(livre.id)">Détail</a></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div> 
