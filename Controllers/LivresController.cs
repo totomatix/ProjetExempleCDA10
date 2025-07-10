@@ -35,7 +35,11 @@ public class LivresController : Controller
             livres = connexion.Query<Livre, Categorie, Livre>(query,
             (livre, categorie) =>
             {
-                livre.categories.Add(categorie);
+                if (categorie != null)
+                {
+
+                    livre.categories.Add(categorie);
+                }
                 return livre;
             }).ToList();
         }
@@ -43,15 +47,11 @@ public class LivresController : Controller
         livres = livres.GroupBy(l => l.id).Select(g =>
             {
                 Livre groupedLivre = g.First();
-                List<Categorie> categories_tmp = g.Select(l => l.categories.Single()).ToList();
-                if (categories_tmp.First() != null)
+                if (groupedLivre.categories.Count > 0)
                 {
-                    groupedLivre.categories = categories_tmp;
+                    groupedLivre.categories = g.Select(l => l.categories.Single()).ToList();
                 }
-                else
-                {
-                    groupedLivre.categories.RemoveAt(0);
-                }
+
                 return groupedLivre;
             }).ToList();
         return View(livres);
