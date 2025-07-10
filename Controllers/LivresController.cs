@@ -28,17 +28,40 @@ public class LivresController : Controller
     }
     public IActionResult Index()
     {
-        string query = "Select * from Livres";
+        string query = "select * from livres left join livre_categorie on id = livre_categorie.livre_id left join categories on categorie_id = categories.id";
         List<Livre> livres;
         using (var connexion = new NpgsqlConnection(_connexionString))
         {
-            livres = connexion.Query<Livre>(query).ToList();
+            livres = connexion.Query<Livre, Categorie, Livre>(query,
+            (livre, categorie) =>
+            {
+                livre.categories.Add(categorie);
+                return livre;
+            }).ToList();
         }
+        //LINQ
+        livres = livres.GroupBy(l => l.id).Select(g =>
+            {
+                Livre groupedLivre = g.First();
+                List<Categorie> categories_tmp = g.Select(l => l.categories.Single()).ToList();
+                if (categories_tmp.First() != null)
+                {
+                    groupedLivre.categories = categories_tmp;
+                }
+                else
+                {
+                    groupedLivre.categories.RemoveAt(0);
+                }
+                return groupedLivre;
+            }).ToList();
         return View(livres);
+
+
     }
 
-    public IActionResult Detail([FromRoute] int id) {
-        
+    public IActionResult Detail([FromRoute] int id)
+    {
+
         string query = "SELECT * FROM Livres WHERE id=@identifiant";
         Livre livre;
         using (var connexion = new NpgsqlConnection(_connexionString))
@@ -51,7 +74,7 @@ public class LivresController : Controller
             {
                 return NotFound();
             }
-            
+
         }
 
         ViewBag.DateDemande = DateTime.Now.ToShortDateString();
@@ -61,7 +84,7 @@ public class LivresController : Controller
         return View(livre);
     }
 
-    
+
 
     public IActionResult Privacy()
     {

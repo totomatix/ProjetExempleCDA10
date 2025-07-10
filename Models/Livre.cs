@@ -7,7 +7,7 @@ public class Livre
     public DateTime date_publication { get; set; }
     public bool disponible { get; set; }
 
-    public List<Categorie> categories { get; } = new List<Categorie>();
+    public List<Categorie> categories { get; set; } = new List<Categorie>();
 
     public List<Emprunt> emprunts { get; } = new List<Emprunt>();
  }
