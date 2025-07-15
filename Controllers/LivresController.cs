@@ -91,9 +91,32 @@ public class LivresController : Controller
         return View();
     }
 
-    [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-    public IActionResult Error()
+
+
+    [HttpGet]
+    public IActionResult Nouveau()
     {
-        return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+
+        return View();
+    }
+
+    [HttpPost]
+    public IActionResult Nouveau([FromForm] Livre livre)
+    {
+        string query = "INSERT INTO Livres (titre,auteur,isbn,date_publication) VALUES(@titre,@auteur,@isbn,@date_publication)";
+        int res;
+        using (var connexion = new NpgsqlConnection(_connexionString))
+        {
+            res = connexion.Execute(query, livre);
+        }
+        if (res != 0)
+        {
+            TempData["ValidateMessage"] = "Livre bien créé !";
+        }
+        else
+        {
+            TempData["ValidateMessage"] = "Erreur";
+        }
+        return RedirectToAction("Index");
     }
 }

@@ -5,6 +5,10 @@
 
 <div>
     <h1>Livres</h1>
+    @if (TempData.ContainsKey("ValidateMessage"))
+    {
+        <p>@TempData["ValidateMessage"]</p>
+    }
     <table>
         <thead>
             <tr>
@@ -32,4 +36,4 @@
             }
         </tbody>
     </table>
-</div> 
+</div>
