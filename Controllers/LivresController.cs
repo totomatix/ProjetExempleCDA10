@@ -103,6 +103,23 @@ public class LivresController : Controller
     [HttpPost]
     public IActionResult Nouveau([FromForm] Livre livre)
     {
+        // vérification de la validité du model (livre)
+        if (!ModelState.IsValid)
+        {
+            return View(livre);
+        }
+
+        // vérification de la non existance du titre dans la bdd
+        string queryTitre = "SELECT titre from Livres where titre=@titre";
+        using (var connexion = new NpgsqlConnection(_connexionString))
+        {
+            if (connexion.Query(queryTitre, new { titre = livre.titre }).Count() > 0)
+            {
+                ViewData["ValidateMessage"] = "Titre déjà existant";
+                return View(livre);
+            }
+        }
+        
         string query = "INSERT INTO Livres (titre,auteur,isbn,date_publication) VALUES(@titre,@auteur,@isbn,@date_publication)";
         int res;
         using (var connexion = new NpgsqlConnection(_connexionString))
