@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using ProjetExempleCDA10.Models;
 using Dapper;
 using Npgsql;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace ProjetExempleCDA10.Controllers;
 
@@ -32,15 +33,15 @@ public class UtilisateursController : Controller
         List<Utilisateur> utilisateurs;
         using (var connexion = new NpgsqlConnection(_connexionString))
         {
-            utilisateurs = connexion.Query<Utilisateur,Role,Utilisateur>(query, 
-            (utilisateur,role) =>
+            utilisateurs = connexion.Query<Utilisateur, Role, Utilisateur>(query,
+            (utilisateur, role) =>
             {
                 utilisateur.role = role;
                 return utilisateur;
             },
             splitOn: "nom"
             ).ToList();
-            
+
         }
 
 
@@ -72,16 +73,67 @@ public class UtilisateursController : Controller
         return View(livre);
     }
 
-
-
-    public IActionResult Privacy()
+    private List<SelectListItem> CreerListeSelectRoles()
     {
-        return View();
+        // récupération des rôles dans la bdd
+        string queryRoles = "SELECT * FROM Roles";
+        List<Role> roles;
+        using (var connexion = new NpgsqlConnection(_connexionString))
+        {
+            roles = connexion.Query<Role>(queryRoles).ToList();
+        }
+        // création de la list des select items
+        List<SelectListItem> listeRoles = new List<SelectListItem>();
+        foreach (Role role in roles)
+        {
+            // chaque élément de la liste déroulante affichera le nom du rôle mais l'utilisateur choisira en fait l'id du rôle voulu
+            listeRoles.Add(new SelectListItem(role.nom, role.id.ToString()));
+        }
+
+        return listeRoles;
+    }
+    // retourne le formulaire permettant de créer un utilisateur
+    [HttpGet]
+    public IActionResult Nouveau()
+    {
+        
+        ViewData["listeRoles"] = CreerListeSelectRoles(); // passage de la liste de SelectListItem à la vue
+        // retourne la vue spécifiée (qui est dans le dossier Utilisateurs)
+        return View("EditeurUtilisateur");
     }
 
-    [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-    public IActionResult Error()
+    [HttpPost]
+    public IActionResult Nouveau([FromForm] Utilisateur utilisateur)
     {
-        return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        string query = "INSERT INTO utilisateurs (nom, prenom, email, date_inscription, role_id) VALUES(@nom,@prenom,@email,CURRENT_TIMESTAMP, @role_id);";
+
+        using (var connexion = new NpgsqlConnection(_connexionString))
+        {
+            try
+            {
+                int nbLignesInserees = connexion.Execute(query, utilisateur);
+            }
+            catch (PostgresException e)
+            {
+                if (e.ConstraintName.Contains("email"))
+                {
+                    ViewData["ValidateMessage"] = "Cet email est déjà utilisé.";
+                } 
+                if (e.ConstraintName.Contains("nom"))
+                {
+                    ViewData["ValidateMessage"] = "Ce nom est déjà utilisé.";
+                } 
+                ViewData["listeRoles"] = CreerListeSelectRoles(); 
+                return View("EditeurUtilisateur", utilisateur);
+            }
+            catch (Exception e)
+            {
+                ViewData["ValidatMessage"] = "Erreur serveur. Veuillez réessayer ultérieurement. Si jamais ça continu contectez le support.";
+                // message d'erreur
+                return View("EditeurUtilisateur");
+            }
+        }
+
+        return RedirectToAction("Index");
     }
 }

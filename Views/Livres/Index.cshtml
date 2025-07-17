@@ -9,6 +9,10 @@
     {
         <p>@TempData["ValidateMessage"]</p>
     }
+    <form asp-asp-controller="Livres" asp-action="Index" method="get">
+        <input type="hidden" name="sort" value="auteurs">
+        <input type="submit" value="Tii par auteurs">
+    </form>
     <table>
         <thead>
             <tr>

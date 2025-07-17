@@ -1,0 +1,43 @@
+@model Utilisateur
+@{
+    List<SelectListItem> listeRoles = (List<SelectListItem> )ViewData["listeRoles"];
+}
+<h1>Nouveau utilisateur</h1>
+@if (ViewData.ContainsKey("ValidateMessage"))
+{
+    <p>@ViewData["ValidateMessage"]</p>
+}
+<form asp-controller="Utilisateurs" asp-action="nouveau" method="post">
+<table>
+        <tr>
+            <td><label asp-for="@Model.nom"></label></td>
+            <td><input asp-for="@Model.nom"></td>
+            <td><span asp-validation-for="@Model.nom" class="text-danger"></span></td>
+        </tr>
+        <tr>
+            <td><label asp-for="@Model.prenom"></label></td>
+            <td><input asp-for="@Model.prenom"></td>
+            <td><span asp-validation-for="@Model.prenom" class="text-danger"></span></td>
+        </tr>
+        <tr>
+            <td><label asp-for="@Model.email"></label></td>
+            <td><input asp-for="@Model.email"></td>
+            <td><span asp-validation-for="@Model.email" class="text-danger"></span></td>
+        </tr>
+        <tr>
+            <td><label asp-for="@Model.role_id"></label></td>
+            <td><select asp-for="@Model.role_id" asp-items="@listeRoles"></select></td> // les options seront créées à partir de la liste fournie par le contrôlleur
+            <td><span asp-validation-for="@Model.role_id" class="text-danger"></span></td>
+        </tr>
+    </table>
+    <input type="submit" value="Envoyer">
+</form>
+
+@if (ViewData.ContainsKey("ValidateMessage"))
+{
+    <p>@ViewData["ValidateMessage"]</p>
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+} 

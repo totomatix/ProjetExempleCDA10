@@ -26,8 +26,11 @@ public class LivresController : Controller
             throw new Exception("Error : Connexion string not found ! ");
         }
     }
-    public IActionResult Index()
+
+
+    public IActionResult Index([FromQuery] string sort = "titre")
     {
+        string route = Request.RouteValues.First().ToString();
         string query = "select * from livres left join livre_categorie on id = livre_categorie.livre_id left join categories on categorie_id = categories.id";
         List<Livre> livres;
         using (var connexion = new NpgsqlConnection(_connexionString))
@@ -119,7 +122,7 @@ public class LivresController : Controller
                 return View(livre);
             }
         }
-        
+
         string query = "INSERT INTO Livres (titre,auteur,isbn,date_publication) VALUES(@titre,@auteur,@isbn,@date_publication)";
         int res;
         using (var connexion = new NpgsqlConnection(_connexionString))
@@ -136,4 +139,6 @@ public class LivresController : Controller
         }
         return RedirectToAction("Index");
     }
+    
+    
 }
