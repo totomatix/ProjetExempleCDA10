@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using ProjetExempleCDA10.Models;
 using Dapper;
 using Npgsql;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace ProjetExempleCDA10.Controllers;
 
@@ -112,6 +113,19 @@ public class LivresController : Controller
             return View(livre);
         }
 
+        // vérification de la validité de l'image
+        string[] permittedExtensions = { ".jpeg", ".jpg", ".png", ".gif" };
+
+        var ext = Path.GetExtension(livre.couvertureFile.FileName).ToLowerInvariant();
+
+        if (string.IsNullOrEmpty(ext) || !permittedExtensions.Contains(ext))
+        {
+            // cette ligne permet de mettre le message d'erreur au bon endroit dans la vue (c.a.d à côté du file picker)
+            ModelState["livre.couvertureFile"]!.Errors.Add(new ModelError("Ce type de fichier n'est pas accepté."));
+            // TODO : refaire try catch
+            throw new Exception("Ce type de fichier n'est pas accepté.");
+        }
+
         // vérification de la non existance du titre dans la bdd
         string queryTitre = "SELECT titre from Livres where titre=@titre";
         using (var connexion = new NpgsqlConnection(_connexionString))
@@ -122,8 +136,21 @@ public class LivresController : Controller
                 return View(livre);
             }
         }
+        //  gestion de la couverture
+        string? filePath = null;
+        if (livre.couvertureFile != null && livre.couvertureFile.Length > 0)
+        {
+            filePath = Path.Combine("/images/livres/",
+                Path.GetFileNameWithoutExtension(Path.GetRandomFileName()) + Path.GetExtension(livre.couvertureFile.FileName)).ToString();
 
-        string query = "INSERT INTO Livres (titre,auteur,isbn,date_publication) VALUES(@titre,@auteur,@isbn,@date_publication)";
+            using (var stream = System.IO.File.Create("wwwroot" + filePath))
+            {
+                livre.couvertureFile.CopyTo(stream);
+            }
+            livre.couverture = filePath;
+        }
+
+        string query = "INSERT INTO Livres (titre,auteur,isbn,date_publication,couverture) VALUES(@titre,@auteur,@isbn,@date_publication,@couverture)";
         int res;
         using (var connexion = new NpgsqlConnection(_connexionString))
         {
@@ -132,13 +159,17 @@ public class LivresController : Controller
         if (res != 0)
         {
             TempData["ValidateMessage"] = "Livre bien créé !";
+
         }
         else
         {
             TempData["ValidateMessage"] = "Erreur";
+            // TODO : supprimer image
         }
+
+
         return RedirectToAction("Index");
     }
-    
-    
+
+
 }

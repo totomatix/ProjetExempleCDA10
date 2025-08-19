@@ -12,9 +12,14 @@ public class Livre
     [DataType(DataType.Date)]
     public DateTime date_publication { get; set; }
     public bool disponible { get; set; }
-    
+
     public int nbCat { get; set; }
     public List<Categorie> categories { get; set; } = new List<Categorie>();
 
     public List<Emprunt> emprunts { get; } = new List<Emprunt>();
+
+
+    public string? couverture { get; set; } // pour l'affichage
+
+    public IFormFile? couvertureFile { get; set; } // pour le formulaire
 }

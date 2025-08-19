@@ -4,7 +4,7 @@
 {
     <p>@ViewData["ValidateMessage"]</p>
 }
-<form asp-controller="Livres" asp-action="Nouveau" method="post">
+<form asp-controller="Livres" asp-action="Nouveau" method="post" enctype="multipart/form-data">
     <table>
         <tr>
             <td><label asp-for="@Model.titre"></label></td>
@@ -25,6 +25,11 @@
             <td><label asp-for="@Model.date_publication"></label></td>
             <td><input asp-for="@Model.date_publication"></td>
             <td><span asp-validation-for="@Model.date_publication" class="text-danger"></span></td>
+        </tr>
+        <tr>
+            <td><label asp-for="@Model.couvertureFile"></label></td>
+            <td><input asp-for="@Model.couvertureFile"></td>
+            <td><span asp-validation-for="@Model.couvertureFile" class="text-danger"></span></td>
         </tr>
     </table>
     <input type="submit" value="Envoyer">
