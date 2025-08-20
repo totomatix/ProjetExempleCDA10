@@ -14,7 +14,9 @@ public class Livre
     public bool disponible { get; set; }
 
     public int nbCat { get; set; }
-    public List<Categorie> categories { get; set; } = new List<Categorie>();
+    public List<Categorie> categories { get; set; } = new List<Categorie>(); // pour l'affichage
+
+    public List<int> categoriesIDs { get; set; } // pour l'édition
 
     public List<Emprunt> emprunts { get; } = new List<Emprunt>();
 

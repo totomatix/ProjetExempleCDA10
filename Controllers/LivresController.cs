@@ -4,6 +4,8 @@ using ProjetExempleCDA10.Models;
 using Dapper;
 using Npgsql;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using ProjetExempleCDA10.ViewModels;
 
 namespace ProjetExempleCDA10.Controllers;
 
@@ -95,80 +97,140 @@ public class LivresController : Controller
         return View();
     }
 
+    private List<SelectListItem> GetCategories()
+    {
 
+        List<SelectListItem> selectListItems = new List<SelectListItem>();
+
+        using (var connexion = new NpgsqlConnection(_connexionString))
+        {
+            string queryCategories = "SELECT id, nom FROM categories";
+            List<Categorie> categories = connexion.Query<Categorie>(queryCategories).ToList();
+
+            foreach (Categorie categorie in categories)
+            {
+                selectListItems.Add(new SelectListItem(categorie.nom, categorie.id.ToString()));
+            }
+        }
+
+        return selectListItems;
+
+    }
 
     [HttpGet]
     public IActionResult Nouveau()
     {
-
-        return View();
+        EditeurLivreViewModel livreViewModel = new EditeurLivreViewModel();
+        livreViewModel.categories = GetCategories();
+        return View("Editeur", livreViewModel);
     }
+
+
 
     [HttpPost]
     public IActionResult Nouveau([FromForm] Livre livre)
     {
-        // vérification de la validité du model (livre)
-        if (!ModelState.IsValid)
+        try
         {
-            return View(livre);
-        }
-
-        // vérification de la validité de l'image
-        string[] permittedExtensions = { ".jpeg", ".jpg", ".png", ".gif" };
-
-        var ext = Path.GetExtension(livre.couvertureFile.FileName).ToLowerInvariant();
-
-        if (string.IsNullOrEmpty(ext) || !permittedExtensions.Contains(ext))
-        {
-            // cette ligne permet de mettre le message d'erreur au bon endroit dans la vue (c.a.d à côté du file picker)
-            ModelState["livre.couvertureFile"]!.Errors.Add(new ModelError("Ce type de fichier n'est pas accepté."));
-            // TODO : refaire try catch
-            throw new Exception("Ce type de fichier n'est pas accepté.");
-        }
-
-        // vérification de la non existance du titre dans la bdd
-        string queryTitre = "SELECT titre from Livres where titre=@titre";
-        using (var connexion = new NpgsqlConnection(_connexionString))
-        {
-            if (connexion.Query(queryTitre, new { titre = livre.titre }).Count() > 0)
+            // vérification de la validité du model (livre)
+            if (!ModelState.IsValid)
             {
-                ViewData["ValidateMessage"] = "Titre déjà existant";
-                return View(livre);
+                throw new Exception("Les données rentrées ne sont pas correctes, veuillez réessayer.");
             }
-        }
-        //  gestion de la couverture
-        string? filePath = null;
-        if (livre.couvertureFile != null && livre.couvertureFile.Length > 0)
-        {
-            filePath = Path.Combine("/images/livres/",
-                Path.GetFileNameWithoutExtension(Path.GetRandomFileName()) + Path.GetExtension(livre.couvertureFile.FileName)).ToString();
 
-            using (var stream = System.IO.File.Create("wwwroot" + filePath))
+            // vérification de la non existance du titre dans la bdd
+            string queryTitre = "SELECT titre from Livres where titre=@titre";
+            using (var connexion = new NpgsqlConnection(_connexionString))
             {
-                livre.couvertureFile.CopyTo(stream);
+                if (connexion.Query(queryTitre, new { titre = livre.titre }).Count() > 0)
+                {
+                    ModelState["livre.titre"]!.Errors.Add(new ModelError("Ce titre existe déjà."));
+                    throw new Exception("Les données rentrées ne sont pas correctes, veuillez réessayer.");
+                }
             }
-            livre.couverture = filePath;
-        }
 
-        string query = "INSERT INTO Livres (titre,auteur,isbn,date_publication,couverture) VALUES(@titre,@auteur,@isbn,@date_publication,@couverture)";
-        int res;
-        using (var connexion = new NpgsqlConnection(_connexionString))
+            // gestion de la couverture si une image est fournie
+            if (livre.couvertureFile != null && livre.couvertureFile.Length > 0)
+            {
+                // vérification de la validité de l'image fournie pour la couverture
+                string[] permittedExtensions = { ".jpeg", ".jpg", ".png", ".gif" };
+
+                var ext = Path.GetExtension(livre.couvertureFile.FileName).ToLowerInvariant();
+
+                if (string.IsNullOrEmpty(ext) || !permittedExtensions.Contains(ext))
+                {
+                    // cette ligne permet de mettre le message d'erreur au bon endroit dans la vue (c.a.d à côté du file picker)
+                    ModelState["livre.couvertureFile"]!.Errors.Add(new ModelError("Ce type de fichier n'est pas accepté."));
+                    throw new Exception("Les données rentrées ne sont pas correctes, veuillez réessayer.");
+                }
+
+                //  enregistrement de l'image sur le système de fichiers et création du chemin de l'image afin de l'enregistrer en BDD
+                string? filePath = Path.Combine("/images/livres/",
+                    Path.GetFileNameWithoutExtension(Path.GetRandomFileName()) + Path.GetExtension(livre.couvertureFile.FileName)).ToString();
+
+                using (var stream = System.IO.File.Create("wwwroot" + filePath))
+                {
+                    livre.couvertureFile.CopyTo(stream);
+                }
+                livre.couverture = filePath;
+
+            }
+
+            // 
+            string queryLivre = "INSERT INTO Livres (titre,auteur,isbn,date_publication,couverture) VALUES(@titre,@auteur,@isbn,@date_publication,@couverture) RETURNING id;";
+            string queryCategories = "INSERT INTO livre_categorie (livre_id, categorie_id) VALUES (@livre_id,@categorie_id)";
+
+            using (var connexion = new NpgsqlConnection(_connexionString))
+            {
+                connexion.Open();
+                using (var transaction = connexion.BeginTransaction())
+                {
+                    // insert du livre et récupération de son id
+                    int livre_id = connexion.ExecuteScalar<int>(queryLivre, livre);
+                    if (livre_id == 0)
+                    {
+                        transaction.Rollback();
+                        throw new Exception("Erreur pendant la création du livre. Veuillez réessayer plus tard. Si le problème persiste merci de contacter l'administrateur.");
+                    }
+                    else
+                    {
+                        // ajout des associations avec les catégories
+                        List<object> list = new List<object>();
+                        foreach (int categorie_id in livre.categoriesIDs)
+                        {
+                            list.Add(new { livre_id = livre_id, categorie_id = categorie_id });
+                        }
+                        int res = connexion.Execute(queryCategories, list);
+                        if (res != livre.categoriesIDs.Count)
+                        {
+                            transaction.Rollback();
+                            throw new Exception("Erreur pendant la création du livre. Veuillez réessayer plus tard. Si le problème persiste merci de contacter l'administrateur.");
+                        }
+                        transaction.Commit();
+                    }
+                }
+
+            }
+
+            ViewData["ValidateMessage"] = "Livre bien créé !";
+            EditeurLivreViewModel livreViewModel = new EditeurLivreViewModel();
+            livreViewModel.categories = GetCategories();
+            return View("Editeur", livreViewModel);
+
+
+        }
+        catch (Exception e)
         {
-            res = connexion.Execute(query, livre);
+            // suppresion de la couverture dans le système de fichier si il y en a une
+            if (livre.couvertureFile != null && System.IO.File.Exists("wwwroot" + livre.couverture))
+            {
+                System.IO.File.Delete("wwwroot" + livre.couverture);
+            }
+            EditeurLivreViewModel livreViewModel = new EditeurLivreViewModel();
+            livreViewModel.categories = GetCategories();
+            ViewData["ValidateMessage"] = e.Message;
+            return View("Editeur", livreViewModel);
         }
-        if (res != 0)
-        {
-            TempData["ValidateMessage"] = "Livre bien créé !";
-
-        }
-        else
-        {
-            TempData["ValidateMessage"] = "Erreur";
-            // TODO : supprimer image
-        }
-
-
-        return RedirectToAction("Index");
     }
 
 

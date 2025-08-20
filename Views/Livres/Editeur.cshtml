@@ -1,0 +1,46 @@
+@using ProjetExempleCDA10.ViewModels
+@model EditeurLivreViewModel
+<h1>Nouveau Livres :</h1>
+@if (ViewData.ContainsKey("ValidateMessage"))
+{
+    <p>@ViewData["ValidateMessage"]</p>
+}
+<form asp-controller="Livres" asp-action="Nouveau" method="post" enctype="multipart/form-data">
+    <table>
+        <tr>
+            <td><label asp-for="@Model.livre.titre"></label></td>
+            <td><input asp-for="@Model.livre.titre"></td>
+            <td><span asp-validation-for="@Model.livre.titre" class="text-danger"></span></td>
+        </tr>
+        <tr>
+            <td><label asp-for="@Model.livre.auteur"></label></td>
+            <td><input asp-for="@Model.livre.auteur"></td>
+            <td><span asp-validation-for="@Model.livre.auteur" class="text-danger"></span></td>
+        </tr>
+        <tr>
+            <td><label asp-for="@Model.livre.isbn"></label></td>
+            <td><input asp-for="@Model.livre.isbn"></td>
+            <td><span asp-validation-for="@Model.livre.isbn" class="text-danger"></span></td>
+        </tr>
+        <tr>
+            <td><label asp-for="@Model.livre.date_publication"></label></td>
+            <td><input asp-for="@Model.livre.date_publication"></td>
+            <td><span asp-validation-for="@Model.livre.date_publication" class="text-danger"></span></td>
+        </tr>
+        <tr>
+            <td><label asp-for="@Model.livre.categoriesIDs"></label></td>
+            <td><select asp-for="@Model.livre.categoriesIDs" asp-items="@Model.categories"></select></td>
+            <td><span asp-validation-for="@Model.livre.categoriesIDs" class="text-danger"></span></td>
+        </tr>
+        <tr>
+            <td><label asp-for="@Model.livre.couvertureFile"></label></td>
+            <td><input asp-for="@Model.livre.couvertureFile"></td>
+            <td><span asp-validation-for="@Model.livre.couvertureFile" class="text-danger"></span></td>
+        </tr>
+    </table>
+    <input type="submit" value="Envoyer">
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
