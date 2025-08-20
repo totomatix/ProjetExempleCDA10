@@ -227,6 +227,7 @@ public class LivresController : Controller
                 System.IO.File.Delete("wwwroot" + livre.couverture);
             }
             EditeurLivreViewModel livreViewModel = new EditeurLivreViewModel();
+            livreViewModel.livre = livre;
             livreViewModel.categories = GetCategories();
             ViewData["ValidateMessage"] = e.Message;
             return View("Editeur", livreViewModel);
