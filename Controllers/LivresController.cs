@@ -97,7 +97,7 @@ public class LivresController : Controller
         return View();
     }
 
-    private List<SelectListItem> GetCategories()
+    private List<SelectListItem> GetCategories(List<Categorie>? selectedCategories = null, List<int>? selectedCategoriesIDs = null)
     {
 
         List<SelectListItem> selectListItems = new List<SelectListItem>();
@@ -109,7 +109,16 @@ public class LivresController : Controller
 
             foreach (Categorie categorie in categories)
             {
-                selectListItems.Add(new SelectListItem(categorie.nom, categorie.id.ToString()));
+                bool selected = false;
+                if (selectedCategories != null)
+                {
+                    selected = selectedCategories.Contains(categorie) ? true : false;
+                }
+                else if (selectedCategoriesIDs != null)
+                {
+                    selected = selectedCategoriesIDs.Contains(categorie.id) ? true : false;
+                }
+                selectListItems.Add(new SelectListItem(categorie.nom, categorie.id.ToString(), selected));
             }
         }
 
@@ -117,10 +126,36 @@ public class LivresController : Controller
 
     }
 
+    private string ManageCover(IFormFile file)
+    {
+
+        // vérification de la validité de l'image fournie pour la couverture
+        string[] permittedExtensions = { ".jpeg", ".jpg", ".png", ".gif" };
+
+        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+
+        if (string.IsNullOrEmpty(ext) || !permittedExtensions.Contains(ext))
+        {
+            // cette ligne permet de mettre le message d'erreur au bon endroit dans la vue (c.a.d à côté du file picker)
+            ModelState["livre.couvertureFile"]!.Errors.Add(new ModelError("Ce type de fichier n'est pas accepté."));
+            throw new Exception("Les données rentrées ne sont pas correctes, veuillez réessayer.");
+        }
+
+        //  enregistrement de l'image sur le système de fichiers et création du chemin de l'image afin de l'enregistrer en BDD
+        string? filePath = Path.Combine("/images/livres/",
+            Path.GetFileNameWithoutExtension(Path.GetRandomFileName()) + Path.GetExtension(file.FileName)).ToString();
+
+        using (var stream = System.IO.File.Create("wwwroot" + filePath))
+        {
+            file.CopyTo(stream);
+        }
+        return filePath;
+    }
+
     [HttpGet]
     public IActionResult Nouveau()
     {
-        EditeurLivreViewModel livreViewModel = new EditeurLivreViewModel();
+        EditeurLivreViewModel livreViewModel = new() { action = "Nouveau", titre = "Nouveau Livre" };
         livreViewModel.categories = GetCategories();
         return View("Editeur", livreViewModel);
     }
@@ -152,31 +187,10 @@ public class LivresController : Controller
             // gestion de la couverture si une image est fournie
             if (livre.couvertureFile != null && livre.couvertureFile.Length > 0)
             {
-                // vérification de la validité de l'image fournie pour la couverture
-                string[] permittedExtensions = { ".jpeg", ".jpg", ".png", ".gif" };
-
-                var ext = Path.GetExtension(livre.couvertureFile.FileName).ToLowerInvariant();
-
-                if (string.IsNullOrEmpty(ext) || !permittedExtensions.Contains(ext))
-                {
-                    // cette ligne permet de mettre le message d'erreur au bon endroit dans la vue (c.a.d à côté du file picker)
-                    ModelState["livre.couvertureFile"]!.Errors.Add(new ModelError("Ce type de fichier n'est pas accepté."));
-                    throw new Exception("Les données rentrées ne sont pas correctes, veuillez réessayer.");
-                }
-
-                //  enregistrement de l'image sur le système de fichiers et création du chemin de l'image afin de l'enregistrer en BDD
-                string? filePath = Path.Combine("/images/livres/",
-                    Path.GetFileNameWithoutExtension(Path.GetRandomFileName()) + Path.GetExtension(livre.couvertureFile.FileName)).ToString();
-
-                using (var stream = System.IO.File.Create("wwwroot" + filePath))
-                {
-                    livre.couvertureFile.CopyTo(stream);
-                }
-                livre.couverture = filePath;
-
+                livre.couverture = ManageCover(livre.couvertureFile!);
             }
 
-            // 
+            // enregistrement du livre en BDD
             string queryLivre = "INSERT INTO Livres (titre,auteur,isbn,date_publication,couverture) VALUES(@titre,@auteur,@isbn,@date_publication,@couverture) RETURNING id;";
             string queryCategories = "INSERT INTO livre_categorie (livre_id, categorie_id) VALUES (@livre_id,@categorie_id)";
 
@@ -213,7 +227,7 @@ public class LivresController : Controller
             }
 
             ViewData["ValidateMessage"] = "Livre bien créé !";
-            EditeurLivreViewModel livreViewModel = new EditeurLivreViewModel();
+            EditeurLivreViewModel livreViewModel = new() { action = "Nouveau", titre = "Nouveau Livre" };
             livreViewModel.categories = GetCategories();
             return View("Editeur", livreViewModel);
 
@@ -226,7 +240,7 @@ public class LivresController : Controller
             {
                 System.IO.File.Delete("wwwroot" + livre.couverture);
             }
-            EditeurLivreViewModel livreViewModel = new EditeurLivreViewModel();
+            EditeurLivreViewModel livreViewModel = new() { action = "Nouveau", titre = "Nouveau Livre" };
             livreViewModel.livre = livre;
             livreViewModel.categories = GetCategories();
             ViewData["ValidateMessage"] = e.Message;
@@ -234,5 +248,131 @@ public class LivresController : Controller
         }
     }
 
+    [HttpGet]
+    public IActionResult Editer(int id)
+    {
+        EditeurLivreViewModel livreViewModel = new() { action = "Editer", titre = "Modification livre", idLivre = id };
+        try
+        {
+            using (var connexion = new NpgsqlConnection(_connexionString))
+            {
+                string query = "SELECT * FROM livres LEFT JOIN livre_categorie ON livres.id = livre_categorie.livre_id LEFT JOIN categories ON livre_categorie.categorie_id = categories.id where livres.id=@id";
+                List<Livre> livres = connexion.Query<Livre, Categorie, Livre>(query, (livre, categorie) =>
+                {
+                    livre.categories.Add(categorie);
+                    return livre;
+                },
+                new { id = id },
+                splitOn: "id").ToList();
+                livreViewModel.livre = livres.GroupBy(l => l.id).Select(g =>
+                {
+                    Livre groupedLivre = g.First();
+                    groupedLivre.categories = g.Select(l => l.categories.First()).ToList();
+                    return groupedLivre;
+                }).First();
+            }
 
+        }
+        catch (InvalidOperationException)
+        {
+            return NotFound();
+        }
+        catch (Exception)
+        {
+            // TODO : return error page
+        }
+        livreViewModel.categories = GetCategories(livreViewModel.livre!.categories);
+
+        return View("Editeur", livreViewModel);
+    }
+
+    [HttpPost]
+    public IActionResult Editer([FromRoute] int id, [FromForm] Livre livre)
+    {
+        if (id != livre.id)
+        {
+            return BadRequest();
+        }
+        try
+        {
+            // vérification de la validité du model (livre)
+            if (!ModelState.IsValid)
+            {
+                throw new Exception("Les données rentrées ne sont pas correctes, veuillez réessayer.");
+            }
+
+
+            // gestion de la couverture si une image est fournie
+            if (livre.couvertureFile != null && livre.couvertureFile.Length > 0)
+            {
+                if (System.IO.File.Exists("wwwroot" + livre.couverture))
+                {
+                    System.IO.File.Delete("wwwroot" + livre.couverture);
+                }
+                livre.couverture = ManageCover(livre.couvertureFile!);
+            }
+
+            // enregistrement du livre en BDD
+            string queryLivre = "UPDATE livres SET titre=@titre, auteur=@auteur, isbn=@isbn, date_publication=@date_publication, couverture=@couverture WHERE id=@id";
+            string queryRemoveCategories = "DELETE FROM livre_categorie WHERE livre_id=@id";
+            string queryCategories = "INSERT INTO livre_categorie (livre_id, categorie_id) VALUES (@livre_id,@categorie_id)";
+
+            using (var connexion = new NpgsqlConnection(_connexionString))
+            {
+                connexion.Open();
+                using (var transaction = connexion.BeginTransaction())
+                {
+                    // modification du livre 
+                    int res = connexion.Execute(queryLivre, livre);
+                    if (res != 1)
+                    {
+                        transaction.Rollback();
+                        throw new Exception("Erreur pendant la mise à jour du livre. Veuillez réessayer plus tard. Si le problème persiste merci de contacter l'administrateur.");
+                    }
+                    else
+                    {
+                        // suppression des anciennes catégories 
+                        connexion.Execute(queryRemoveCategories, new { id = id });
+                        // TODO : controller bien supprimer
+                        // ajout des associations avec les catégories
+                        List<object> list = new List<object>();
+                        foreach (int categorie_id in livre.categoriesIDs)
+                        {
+                            list.Add(new { livre_id = id, categorie_id = categorie_id });
+                        }
+                        res = connexion.Execute(queryCategories, list);
+                        if (res != livre.categoriesIDs.Count)
+                        {
+                            transaction.Rollback();
+                            throw new Exception("Erreur pendant la mise à jour du livre. Veuillez réessayer plus tard. Si le problème persiste merci de contacter l'administrateur.");
+                        }
+                        transaction.Commit();
+                    }
+                }
+
+            }
+
+            ViewData["ValidateMessage"] = "Livre mis à jour";
+            EditeurLivreViewModel livreViewModel = new() { action = "Editer", titre = "Modification Livre", idLivre = id };
+            livreViewModel.livre = livre;
+            livreViewModel.categories = GetCategories(null, livre.categoriesIDs);
+
+            return View("Editeur", livreViewModel);
+
+
+        }
+        catch (Exception e)
+        {
+            // suppresion de la couverture dans le système de fichier si il y en a une
+            if (livre.couvertureFile != null && System.IO.File.Exists("wwwroot" + livre.couverture))
+            {
+                System.IO.File.Delete("wwwroot" + livre.couverture);
+            }
+            EditeurLivreViewModel livreViewModel = new() { action = "Editer", titre = "Modification livre", idLivre = id };
+            livreViewModel.livre = livre;
+            livreViewModel.categories = GetCategories(null, livre.categoriesIDs);
+            ViewData["ValidateMessage"] = e.Message;
+            return View("Editeur", livreViewModel);
+        }
+    }
 }

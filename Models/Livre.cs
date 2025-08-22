@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 public class Livre
 {
@@ -13,13 +14,11 @@ public class Livre
     public DateTime date_publication { get; set; }
     public bool disponible { get; set; }
 
-    public int nbCat { get; set; }
     public List<Categorie> categories { get; set; } = new List<Categorie>(); // pour l'affichage
 
     public List<int> categoriesIDs { get; set; } // pour l'édition
 
     public List<Emprunt> emprunts { get; } = new List<Emprunt>();
-
 
     public string? couverture { get; set; } // pour l'affichage
 

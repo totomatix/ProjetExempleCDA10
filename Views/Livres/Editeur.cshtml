@@ -1,11 +1,11 @@
 @using ProjetExempleCDA10.ViewModels
 @model EditeurLivreViewModel
-<h1>Nouveau Livres :</h1>
+<h1>@Model.titre</h1>
 @if (ViewData.ContainsKey("ValidateMessage"))
 {
     <p>@ViewData["ValidateMessage"]</p>
 }
-<form asp-controller="Livres" asp-action="Nouveau" method="post" enctype="multipart/form-data">
+<form asp-controller="Livres" asp-action="@Model.action" asp-route-id="@Model.idLivre" method="post" enctype="multipart/form-data">
     <table>
         <tr>
             <td><label asp-for="@Model.livre.titre"></label></td>
@@ -38,6 +38,8 @@
             <td><span asp-validation-for="@Model.livre.couvertureFile" class="text-danger"></span></td>
         </tr>
     </table>
+    <input type="hidden" name="livre.couverture" value="@Model.livre.couverture">
+    <input type="hidden" asp-for="@Model.livre.id">
     <input type="submit" value="Envoyer">
 </form>
 
