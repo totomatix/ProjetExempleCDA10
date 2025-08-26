@@ -23,6 +23,8 @@
                 <th>Date de publication</th>
                 <th>Disponible</th>
                 <th>Lien vers le détail</th>
+                <th>Lien vers la modification</th>
+                <th>Lien pour supprimer</th>
             </tr>
         </thead>
         <tbody>
@@ -36,6 +38,14 @@
                     <td>@(livre.date_publication)</td>
                     <td>@(livre.disponible)</td>
                     <td><a asp-controller="Livres" asp-action="Detail" asp-route-id="@(livre.id)">Détail</a></td>
+                    <td><a asp-controller="Livres" asp-action="Editer" asp-route-id="@(livre.id)">Modifier</a></td>
+                    <td>
+                        <form class="formSupprLivre" asp-controller="Livres" asp-action="Supprimer" asp-route-id="@(livre.id)" method="post">
+                            <input type="submit" value="Supprimer">
+                            <input type="hidden" asp-for="@livre.id" name="idLivre">
+                        </form>
+                    </td>
+
                 </tr>
             }
         </tbody>

@@ -157,6 +157,7 @@ public class LivresController : Controller
     {
         EditeurLivreViewModel livreViewModel = new() { action = "Nouveau", titre = "Nouveau Livre" };
         livreViewModel.categories = GetCategories();
+        livreViewModel.livre = new Livre();
         return View("Editeur", livreViewModel);
     }
 
@@ -374,5 +375,72 @@ public class LivresController : Controller
             ViewData["ValidateMessage"] = e.Message;
             return View("Editeur", livreViewModel);
         }
+    }
+
+    [HttpPost]
+    public IActionResult Supprimer([FromRoute] int id, [FromForm] int idLivre)
+    {
+        if (id != idLivre)
+        {
+            return BadRequest();
+        }
+
+        // requêtes SQL
+        string querySupprimerLiensCategories = "DELETE FROM livre_categorie WHERE livre_id=@id;";
+        string queryUpdateEmprunts = "UPDATE emprunts SET  livre_id=null WHERE livre_id=@id";
+        string querySupprimerLivre = "DELETE FROM livres WHERE id=@id;";
+
+        string queryNombresCategories = "SELECT count(*) FROM livre_categorie WHERE livre_id=@id";
+        string queryNombresEmprunts = "SELECT count(*) FROM emprunts WHERE livre_id=@id";
+
+        try
+        {
+
+
+            using (var connexion = new NpgsqlConnection(_connexionString))
+            {
+                connexion.Open();
+                using (var transaction = connexion.BeginTransaction())
+                {
+                    // récupération du nombre de catégories du livre
+                    int nbCat = connexion.ExecuteScalar<int>(queryNombresCategories, new { id = id });
+                    // exécution de la req de suppression des catégories
+                    int res = connexion.Execute(querySupprimerLiensCategories, new { id = id });
+                    if (res != nbCat)
+                    {
+                        transaction.Rollback();
+                        throw new Exception("Problème pendant la suppression. Veuillez réessayer plus tard. ");
+                    }
+
+                    // récupération du nombre d'emprunts de ce livre
+                    int nbEmprunts = connexion.ExecuteScalar<int>(queryNombresEmprunts, new { id = id });
+                    // mise à jour des emprunts
+                    res = connexion.Execute(queryUpdateEmprunts, new { id = id });
+                    if (res != nbEmprunts)
+                    {
+                        transaction.Rollback();
+                        throw new Exception("Problème pendant la suppression. Veuillez réessayer plus tard. ");
+                    }
+
+                    // suppression du livre
+                    res = connexion.Execute(querySupprimerLivre, new { id = id });
+                    if (res != 1)
+                    {
+                        transaction.Rollback();
+                        throw new Exception("Problème pendant la suppression. Veuillez réessayer plus tard. ");
+                    }
+                    transaction.Commit();
+                }
+
+            }
+        }
+        catch (Exception e)
+        {
+            TempData["ValidateMessage"] = e.Message;
+            return RedirectToAction("Index");
+        }
+
+        TempData["ValidateMessage"] = "Suppression effectuée.";
+        return RedirectToAction("Index");
     }
 }
