@@ -29,3 +29,17 @@ body {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
   text-align: start;
 }
+
+div#affichageRecherche {
+  display: none;
+  width: 600px;
+  height: 600px;
+  position: absolute;
+  right: 0px;
+  top: 50px;
+  background-color: gray;
+}
+
+div#affichageRecherche.actif {
+  display: block;
+}

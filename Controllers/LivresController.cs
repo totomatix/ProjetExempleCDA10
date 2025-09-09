@@ -30,6 +30,15 @@ public class LivresController : Controller
         }
     }
 
+    public IActionResult SQLInject([FromQuery] string sql)
+    {
+        string query = "SELECT * From Livres Where titre=" + sql;
+        using (var connexion = new NpgsqlConnection(_connexionString))
+        {
+            List<Livre> livres = connexion.Query<Livre>(query).ToList();
+            return View("Index", livres);
+        }
+    }
 
     public IActionResult Index([FromQuery] string sort = "titre")
     {
@@ -64,6 +73,8 @@ public class LivresController : Controller
 
 
     }
+
+    [HttpGet]
 
     public IActionResult Detail([FromRoute] int id)
     {
@@ -153,6 +164,19 @@ public class LivresController : Controller
     }
 
     [HttpGet]
+    public IActionResult RechercheLivre([FromQuery] string nom)
+    {
+        string query = "SELECT * FROM Livres WHERE lower(titre) like lower(@titre)";
+        List<Livre> livres;
+        using (var connexion = new NpgsqlConnection(_connexionString))
+        {
+            livres = connexion.Query<Livre>(query, new { titre = "%" + nom + "%"}).ToList();
+        }
+        return Json(livres);
+
+    }
+
+    [HttpGet]
     public IActionResult Nouveau()
     {
         EditeurLivreViewModel livreViewModel = new() { action = "Nouveau", titre = "Nouveau Livre" };
@@ -164,6 +188,7 @@ public class LivresController : Controller
 
 
     [HttpPost]
+    [ValidateAntiForgeryToken]
     public IActionResult Nouveau([FromForm] Livre livre)
     {
         try

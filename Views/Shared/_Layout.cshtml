@@ -36,11 +36,14 @@
                             <a class="nav-link text-dark" asp-area="" asp-controller="Livres" asp-action="Nouveau">Ajouter un livre</a>
                         </li>
                     </ul>
+                    <label for="recherche">Recherche</label><input type="text" id="recherche">
+                    <div id="affichageRecherche"></div>
                 </div>
             </div>
         </nav>
     </header>
     <div class="container">
+        <partial name="_CookieConsentPartial" />
         <main role="main" class="pb-3">
             @RenderBody()
         </main>

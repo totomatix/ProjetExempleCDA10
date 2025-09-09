@@ -28,4 +28,21 @@ public class HomeController : Controller
     {
         return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
     }
+
+    [Route("/Home/HandleError/{statusCode}")]
+    public IActionResult HandleError(int statusCode)
+    {
+        if (statusCode == 403)
+        {
+            return View("AccessDenied");
+        }
+        else if (statusCode == 404)
+        {
+            return View("NotFound");
+        }
+        else
+        {
+            return View("AutresErreurs");
+        }
+    }
 }
